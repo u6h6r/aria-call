@@ -2,6 +2,12 @@
 
 AriaCall is an advanced AI-powered receptionist designed specifically for dental clinics. It answers every call, schedules appointments, provides information, and is fully integrated with your clinic’s calendar and management system. Powered by the latest generative AI and voice technologies, AriaCall ensures seamless, professional, and personalized patient communication around the clock.
 
+##Website
+[ariacall](https://ariacall.pl/)
+
+##Demo
+https://www.youtube.com/watch?v=SgCAYGT-Mps
+
 ## Features:
 - 🏁 **Real-time interaction:** responds to patients with low latency, typically within 1 second, using streaming technology.
 - 🗣️ **Appointment scheduling:** automatically schedules, reschedules, or cancels appointments in your clinic's calendar.
