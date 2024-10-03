@@ -56,9 +56,7 @@ npm run dev
 
 ### 5. Run app locally
 
-Simply by double click on index.html to launch app frontend in your local browser.
-
-This setup routes incoming call audio to AriaCall.
+Simply by double click on `index.html` to launch app frontend in your local browser.
 
 ## How AriaCall Works
 AriaCall orchestrates interactions between multiple services (Twilio, Deepgram, OpenAI) to handle voice calls in real time. 
