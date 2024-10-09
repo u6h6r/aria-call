@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AriaCall - recepcjonistka AI w Twoim gabinecie!</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
   <div class="top-bar">
@@ -27,16 +29,16 @@
   <div class="main-content">
     <div class="left-panel">
       <h1>Przetestuj AriaCall!</h1>
-    
+
       <div id="visual">
         <div id="ball"></div>
       </div>
-    
+
       <div class="button-container">
         <button id="start">Zadzwoń</button>
         <button id="stop" disabled>Zawieś</button>
       </div>
-    
+
       <div id="output"></div>
     </div>
 
@@ -48,7 +50,6 @@
   </div>
 
   <script>
-
     const hamburger = document.querySelector('.hamburger-menu');
     const navLinks = document.getElementById('navLinks');
 
@@ -69,10 +70,10 @@
     });
 
     const wsUrl = location.protocol === 'https:'
-        ? `wss://${location.host}/connection`
-        : `ws://${location.host}/connection`;
+      ? `wss://${location.host}/connection`
+      : `ws://${location.host}/connection`;
 
-      const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(wsUrl);
     let audioContext;
     let microphoneAudioContext;
     let microphoneStream;
@@ -184,7 +185,7 @@
           microphoneStream.connect(microphoneProcessor);
           microphoneProcessor.connect(microphoneAudioContext.destination);
 
-          microphoneProcessor.onaudioprocess = function(e) {
+          microphoneProcessor.onaudioprocess = function (e) {
             const inputData = e.inputBuffer.getChannelData(0);
             const downsampledBuffer = downsampleBuffer(inputData, microphoneAudioContext.sampleRate, 8000);
             const encodedData = encodeMuLaw(downsampledBuffer);
