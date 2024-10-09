@@ -4,104 +4,82 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AriaCall - recepcjonistka AI w Twoim gabinecie!</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f4f4f4;
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 24px;
-      font-weight: bold;
-      color: #000;
-    }
-
-    #visual {
-      margin: 20px 0;
-    }
-
-    #ball {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background-color: #B3CBFC;
-      margin: 20px auto;
-      animation: none;
-      transition: transform 0.3s ease-in-out;
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.3);
-      }
-    }
-
-    button {
-      width: 200px;
-      padding: 15px;
-      margin: 10px;
-      border: none;
-      border-radius: 30px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      color: #fff;
-      background-color: #4E8AFF;
-      transition: background-color 0.3s ease;
-    }
-
-    button:disabled {
-      background-color: #A9A9A9;
-    }
-
-    #output {
-      color: #000;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-
-    /* Center the ball and buttons on mobile */
-    @media (max-width: 768px) {
-      #visual, button {
-        width: 100%;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>AriaCall - recepcjonistka AI w Twoim gabinecie!</h1>
 
-  <div id="visual">
-    <div id="ball"></div>
+  <div class="top-bar">
+    <div class="logo">
+      <img src="ariacall_logo.png" alt="Logo">
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a href="https://ariacall.pl" target="_blank">Strona projektu</a>
+      <a href="https://github.com/u6h6r/aria-call" target="_blank">Github</a>
+    </div>
+    <a href="https://calendly.com/ariacall/30min" class="demo-button">Umów demo</a>
+    <div class="hamburger-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
   </div>
 
-  <button id="start">Zadzwoń</button>
-  <button id="stop" disabled>Zawieś</button>
+  <div class="main-content">
+    <div class="left-panel">
+      <h1>Przetestuj AriaCall!</h1>
+    
+      <div id="visual">
+        <div id="ball"></div>
+      </div>
+    
+      <div class="button-container">
+        <button id="start">Zadzwoń</button>
+        <button id="stop" disabled>Zawieś</button>
+      </div>
+    
+      <div id="output"></div>
+    </div>
 
-  <iframe
-    src="https://calendar.google.com/calendar/embed?height=500&wkst=2&ctz=Europe%2FWarsaw&bgcolor=%234285F4&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&mode=WEEK&src=YXJpYWRlbnRhbC5vZmZpY2VAZ21haWwuY29t&color=%234285F4"
-    style="border-width:0" width="800" height="700" frameborder="0" scrolling="no"></iframe>
-
-  <div id="output"></div>
+    <div class="right-panel">
+      <iframe
+        src="https://calendar.google.com/calendar/embed?height=500&wkst=2&ctz=Europe%2FWarsaw&bgcolor=%234285F4&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&mode=WEEK&src=YXJpYWRlbnRhbC5vZmZpY2VAZ21haWwuY29t&color=%234285F4"
+        style="border-width:0" width="800" height="700" frameborder="0" scrolling="no"></iframe>
+    </div>
+  </div>
 
   <script>
+    const hamburger = document.querySelector('.hamburger-menu');
+    const navLinks = document.getElementById('navLinks');
+
+    hamburger.addEventListener('click', () => {
+      if (navLinks.style.display === 'flex') {
+        navLinks.style.display = 'none';
+      } else {
+        navLinks.style.display = 'flex';
+        navLinks.style.position = 'absolute';
+        navLinks.style.top = '60px';
+        navLinks.style.left = '0';
+        navLinks.style.width = '100%';
+        navLinks.style.backgroundColor = '#fff';
+        navLinks.style.flexDirection = 'column';
+        navLinks.style.padding = '10px 0';
+        navLinks.style.zIndex = '999';
+      }
+    });
+
     const ws = new WebSocket('ws://localhost:3000/connection');
     let audioContext;
+    let microphoneAudioContext;
     let microphoneStream;
-    let processor;
+    let microphoneProcessor;
     let conversationStarted = false;
     let audioQueue = [];
     let isPlaying = false;
+    let currentAudio;
+
+    let analyser;
+    let dataArray;
+    let animationId;
 
     ws.onopen = () => {
       console.log('Connected to server');
@@ -126,37 +104,84 @@
     function playNextAudio() {
       if (audioQueue.length === 0) {
         isPlaying = false;
-        console.log("Audio playback finished.");
-        animateBall(false); // Stop ball animation
+        cancelAnimationFrame(animationId);
+        animateBall(false);
         return;
       }
 
       isPlaying = true;
       const audioData = audioQueue.shift();
       const audio = new Audio(`data:audio/wav;base64,${audioData}`);
-      audio.onended = playNextAudio;
-      animateBall(true); // Start ball animation during audio playback
+      currentAudio = audio;
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const source = audioContext.createMediaElementSource(audio);
+
+      if (!analyser) {
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+      }
+
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      audio.onended = () => {
+        source.disconnect();
+        playNextAudio();
+      };
+
       audio.play().then(() => {
-        console.log("Played audio");
+        visualizeFrequency();
       }).catch((error) => {
-        console.error("Error playing audio:", error);
         playNextAudio();
       });
+    }
+
+    function visualizeFrequency() {
+      animationId = requestAnimationFrame(visualizeFrequency);
+
+      analyser.getByteFrequencyData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avgFrequency = sum / dataArray.length;
+
+      const minScale = 1;
+      const maxScale = 4;
+      const scaleFactor = minScale + ((avgFrequency / 255) * (maxScale - minScale));
+
+      const ball = document.getElementById('ball');
+      ball.style.transform = `scale(${scaleFactor})`;
+    }
+
+    function animateBall(start) {
+      const ball = document.getElementById('ball');
+      if (!start) {
+        ball.style.transform = 'scale(1)';
+        cancelAnimationFrame(animationId);
+      }
     }
 
     function startMicrophone() {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          microphoneStream = audioContext.createMediaStreamSource(stream);
+          microphoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+          microphoneStream = microphoneAudioContext.createMediaStreamSource(stream);
 
-          processor = audioContext.createScriptProcessor(2048, 1, 1);
-          microphoneStream.connect(processor);
-          processor.connect(audioContext.destination);
+          microphoneProcessor = microphoneAudioContext.createScriptProcessor(2048, 1, 1);
+          microphoneStream.connect(microphoneProcessor);
+          microphoneProcessor.connect(microphoneAudioContext.destination);
 
-          processor.onaudioprocess = function(e) {
+          microphoneProcessor.onaudioprocess = function(e) {
             const inputData = e.inputBuffer.getChannelData(0);
-            const downsampledBuffer = downsampleBuffer(inputData, audioContext.sampleRate, 8000);
+            const downsampledBuffer = downsampleBuffer(inputData, microphoneAudioContext.sampleRate, 8000);
             const encodedData = encodeMuLaw(downsampledBuffer);
             const base64data = btoa(String.fromCharCode.apply(null, encodedData));
 
@@ -165,8 +190,6 @@
               media: { payload: base64data }
             }));
           };
-
-          console.log('Microphone started');
         })
         .catch(err => {
           console.error('Error accessing microphone:', err);
@@ -174,20 +197,36 @@
     }
 
     function stopMicrophone() {
-      if (processor) {
-        processor.disconnect();
-        processor.onaudioprocess = null;
-        processor = null;
+      if (microphoneProcessor) {
+        microphoneProcessor.disconnect();
+        microphoneProcessor.onaudioprocess = null;
+        microphoneProcessor = null;
       }
       if (microphoneStream) {
         microphoneStream.disconnect();
         microphoneStream = null;
       }
+      if (microphoneAudioContext) {
+        microphoneAudioContext.close();
+        microphoneAudioContext = null;
+      }
+    }
+
+    function stopAudioPlayback() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
       if (audioContext) {
         audioContext.close();
         audioContext = null;
+        analyser = null;
+        dataArray = null;
       }
-      console.log('Microphone stopped');
+      isPlaying = false;
+      audioQueue = [];
+      animateBall(false);
     }
 
     function downsampleBuffer(buffer, sampleRate, outSampleRate) {
@@ -238,15 +277,6 @@
       return encoded;
     }
 
-    function animateBall(start) {
-      const ball = document.getElementById('ball');
-      if (start) {
-        ball.style.animation = 'pulse 1s infinite';
-      } else {
-        ball.style.animation = 'none';
-      }
-    }
-
     document.getElementById('start').addEventListener('click', () => {
       if (conversationStarted) return;
 
@@ -259,7 +289,6 @@
       }));
       conversationStarted = true;
 
-      console.log('Started conversation');
       startMicrophone();
     });
 
@@ -267,6 +296,7 @@
       if (!conversationStarted) return;
 
       stopMicrophone();
+      stopAudioPlayback();
 
       document.getElementById('start').disabled = false;
       document.getElementById('stop').disabled = true;
@@ -276,9 +306,8 @@
         message: 'Ending conversation'
       }));
       conversationStarted = false;
-
-      console.log('Stopped conversation');
     });
+
   </script>
 </body>
 </html>
