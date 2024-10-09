@@ -15,76 +15,11 @@ const app = express();
 ExpressWs(app);
 
 const PORT = process.env.PORT || 3000;
-const SECRET_KEY = process.env.JWT_SECRET; // Use an environment variable for the secret key
-
 
 app.use(express.static('public'));
 app.use(express.json());
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
-
-// Login route to authenticate the user and return a JWT token
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-
-  // Check if the username matches
-  if (username !== ADMIN_USERNAME || !bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  // Generate a JWT token for the user
-  const token = jwt.sign({ username: ADMIN_USERNAME }, SECRET_KEY, { expiresIn: '1h' });
-
-  // Return the token to the client
-  res.json({ token });
-});
-
-// Middleware to verify JWT token
-function verifyToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-
-  if (!authHeader) {
-    return res.status(403).json({ message: 'No token provided' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ message: 'Unauthorized: Invalid token' });
-    }
-
-    // Token is valid, store decoded user data
-    req.user = decoded;
-    next();
-  });
-}
-
-// Serve login.html at the /login URL
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-// Root route: Redirect to /login if not authenticated
-app.get('/', (req, res) => {
-  const token = req.headers['authorization'] ? req.headers['authorization'].split(' ')[1] : null;
-
-  if (!token) {
-    return res.redirect('/login');  // Redirect to login if no token is found
-  }
-
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.redirect('/login');  // Redirect to login on invalid token
-    }
-
-    // Token is valid, serve the protected page (index.html)
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
-});
-
-app.ws('/connection', verifyToken,  (ws) => {
+app.ws('/connection',  (ws) => {
   try {
     ws.on("error", console.error);
     let streamSid = "stream-123"; // static stream ID
