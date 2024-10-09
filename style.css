@@ -9,7 +9,6 @@ body {
     flex-direction: row;
   }
   
-  /* Stylizacja górnego paska */
   .top-bar {
     display: flex;
     align-items: center;
