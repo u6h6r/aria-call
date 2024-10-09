@@ -95,7 +95,11 @@
   <div id="output"></div>
 
   <script>
-    const ws = new WebSocket('ws://localhost:3000/connection');
+    const wsUrl = location.protocol === 'https:'
+        ? `wss://${location.host}/connection`
+        : `ws://${location.host}/connection`;
+
+      const ws = new WebSocket(wsUrl);
     let audioContext;
     let microphoneStream;
     let processor;
