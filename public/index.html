@@ -30,16 +30,32 @@
     <div class="left-panel">
       <h1>Przetestuj AriaCall!</h1>
 
-      <div id="visual">
-        <div id="ball"></div>
+      <!-- Authentication form -->
+      <div id="auth-form">
+        <h3>Login to AriaCall</h3>
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        <br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        <br><br>
+        <button id="login-button">Login</button>
+        <p id="auth-error" style="color: red; display: none;">Invalid credentials. Please try again.</p>
       </div>
 
-      <div class="button-container">
-        <button id="start">Zadzwoń</button>
-        <button id="stop" disabled>Zawieś</button>
-      </div>
+      <!-- Call interface -->
+      <div id="call-interface" style="display:none;">
+        <div id="visual">
+          <div id="ball"></div>
+        </div>
 
-      <div id="output"></div>
+        <div class="button-container">
+          <button id="start">Zadzwoń</button>
+          <button id="stop" disabled>Zawieś</button>
+        </div>
+
+        <div id="output"></div>
+      </div>
     </div>
 
     <div class="right-panel">
@@ -50,35 +66,17 @@
   </div>
 
   <script>
-    const hamburger = document.querySelector('.hamburger-menu');
-    const navLinks = document.getElementById('navLinks');
-
-    hamburger.addEventListener('click', () => {
-      if (navLinks.style.display === 'flex') {
-        navLinks.style.display = 'none';
-      } else {
-        navLinks.style.display = 'flex';
-        navLinks.style.position = 'absolute';
-        navLinks.style.top = '60px';
-        navLinks.style.left = '0';
-        navLinks.style.width = '100%';
-        navLinks.style.backgroundColor = '#fff';
-        navLinks.style.flexDirection = 'column';
-        navLinks.style.padding = '10px 0';
-        navLinks.style.zIndex = '999';
-      }
-    });
-
     const wsUrl = location.protocol === 'https:'
       ? `wss://${location.host}/connection`
       : `ws://${location.host}/connection`;
 
-    const ws = new WebSocket(wsUrl);
+    let ws;
+    let isAuthenticated = false; // Track if the client is authenticated
+    let conversationStarted = false;
     let audioContext;
     let microphoneAudioContext;
     let microphoneStream;
     let microphoneProcessor;
-    let conversationStarted = false;
     let audioQueue = [];
     let isPlaying = false;
     let currentAudio;
@@ -87,25 +85,71 @@
     let dataArray;
     let animationId;
 
-    ws.onopen = () => {
-      console.log('Connected to server');
-    };
+    // Handle login button click
+    document.getElementById('login-button').addEventListener('click', (event) => {
+      event.preventDefault(); // Prevent form submission refresh
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Received message from server:', data);
+      if (username && password) {
+        // Initiate WebSocket connection and send authentication message
+        ws = new WebSocket(wsUrl);
 
-      if (data.event === 'media' && data.media && data.media.payload) {
-        audioQueue.push(data.media.payload);
-        if (!isPlaying) {
-          playNextAudio();
-        }
+        ws.onopen = function () {
+          console.log('WebSocket connection opened');
+
+          // Send authentication message
+          ws.send(JSON.stringify({
+            type: 'auth',
+            username: username,
+            password: password
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log('Received message from server:', data);
+
+          // Handle the server's authentication response
+          if (data.type === 'auth') {
+            if (data.success) {
+              console.log('Authentication successful');
+              isAuthenticated = true; // Mark the client as authenticated
+              document.getElementById('auth-form').style.display = 'none'; // Hide the login form
+              document.getElementById('call-interface').style.display = 'block'; // Show the call interface
+            } else {
+              console.log('Authentication failed');
+              document.getElementById('auth-error').style.display = 'block'; // Show error message
+              ws.close(); // Close the connection if authentication fails
+            }
+            return; // Exit since this is an authentication message
+          }
+
+          // Only handle other messages if the client is authenticated
+          if (!isAuthenticated) {
+            console.warn('Not authenticated, ignoring message');
+            return;
+          }
+
+          // Handle media events if authenticated
+          if (data.event === 'media' && data.media && data.media.payload) {
+            audioQueue.push(data.media.payload);
+            if (!isPlaying) {
+              playNextAudio();
+            }
+          }
+
+          // Handle partial responses if authenticated
+          if (data.partialResponse) {
+            document.getElementById('output').innerHTML += `<p>${data.partialResponse}</p>`;
+          }
+        };
+      } else {
+        document.getElementById('auth-error').style.display = 'block'; // Show error if inputs are empty
+        document.getElementById('auth-error').innerText = 'Please provide both username and password.';
       }
+    });
 
-      if (data.partialResponse) {
-        document.getElementById('output').innerHTML += `<p>${data.partialResponse}</p>`;
-      }
-    };
 
     function playNextAudio() {
       if (audioQueue.length === 0) {
