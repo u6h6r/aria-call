@@ -65,8 +65,9 @@ app.use(express.json());
 console.log("ADMIN_USERNAME:", process.env.ADMIN_USERNAME);
 console.log("ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD);
 
+let isAuthenticated = false;
+
 app.ws("/connection", (ws, req) => {
-  let isAuthenticated = false; // Track authentication state for this connection
   try {
     ws.on("error", console.error);
     let streamSid = "stream-123"; // static stream ID
@@ -96,8 +97,6 @@ app.ws("/connection", (ws, req) => {
       );
       interactionCount += 1;
     };
-
-    let isAuthenticated = false; // Track the authentication status for the connection
 
     ws.on("message", function message(data) {
       const msg = JSON.parse(data);
