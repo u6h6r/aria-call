@@ -102,40 +102,40 @@ const tools = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "endCall",
-      say: "Dziękujemy za rozmowę. Gabinet Aria Dental.",
-      description: "Terminates the current call.",
-      parameters: {
-        type: "object",
-        properties: {
-          callSid: {
-            description:
-              "The unique identifier for the call that needs to be terminated.",
-            type: "string",
-          },
-        },
-        required: ["callSid"],
-      },
-      returns: {
-        type: "object",
-        properties: {
-          status: {
-            type: "string",
-            description:
-              'The status of the call termination attempt, e.g., "success" or "error".',
-          },
-          message: {
-            type: "string",
-            description:
-              "A message detailing the result of the termination attempt.",
-          },
-        },
-      },
-    },
-  },
+  // {
+  //   type: "function",
+  //   function: {
+  //     name: "endCall",
+  //     say: "Dziękujemy za rozmowę. Gabinet Aria Dental.",
+  //     description: "Terminates the current call.",
+  //     parameters: {
+  //       type: "object",
+  //       properties: {
+  //         callSid: {
+  //           description:
+  //             "The unique identifier for the call that needs to be terminated.",
+  //           type: "string",
+  //         },
+  //       },
+  //       required: ["callSid"],
+  //     },
+  //     returns: {
+  //       type: "object",
+  //       properties: {
+  //         status: {
+  //           type: "string",
+  //           description:
+  //             'The status of the call termination attempt, e.g., "success" or "error".',
+  //         },
+  //         message: {
+  //           type: "string",
+  //           description:
+  //             "A message detailing the result of the termination attempt.",
+  //         },
+  //       },
+  //     },
+  //   },
+  // },
   {
     type: "function",
     function: {

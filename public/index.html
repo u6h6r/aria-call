@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AriaCall - recepcjonistka AI w Twoim gabinecie!</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="top-bar">
+    <div class="logo">
+      <img src="ariacall_logo.png" alt="Logo">
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a href="https://ariacall.pl" target="_blank">Strona projektu</a>
+      <a href="https://github.com/u6h6r/aria-call" target="_blank">Github</a>
+    </div>
+    <a href="https://calendly.com/ariacall/30min" class="demo-button">Umów demo</a>
+    <div class="hamburger-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="left-panel">
+      <h1>Przetestuj AriaCall!</h1>
+
+      <!-- Authentication form -->
+      <div id="auth-form">
+        <h3>Login to AriaCall</h3>
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        <br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        <br><br>
+        <button id="login-button">Login</button>
+        <p id="auth-error" style="color: red; display: none;">Invalid credentials. Please try again.</p>
+      </div>
+
+      <!-- Call interface -->
+      <div id="call-interface" style="display:none;">
+        <div id="visual">
+          <div id="ball"></div>
+        </div>
+
+        <div class="button-container">
+          <button id="start">Zadzwoń</button>
+          <button id="stop" disabled>Zawieś</button>
+          <button id="refresh-calendar" style="margin-bottom: 10px;">Odśwież kalendarz</button>
+        </div>
+
+        <div id="output"></div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <iframe
+        id="calendar-iframe"
+        src="https://calendar.google.com/calendar/embed?height=500&wkst=2&ctz=Europe%2FWarsaw&bgcolor=%234285F4&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&mode=WEEK&src=YXJpYWRlbnRhbC5vZmZpY2VAZ21haWwuY29t&color=%234285F4"
+        style="border-width:0" width="800" height="700" frameborder="0" scrolling="no"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const wsUrl = location.protocol === 'https:'
+      ? `wss://${location.host}/connection`
+      : `ws://${location.host}/connection`;
+
+    let ws;
+    let isAuthenticated = false; // Track if the client is authenticated
+    let conversationStarted = false;
+    let audioContext;
+    let microphoneAudioContext;
+    let microphoneStream;
+    let microphoneProcessor;
+    let audioQueue = [];
+    let isPlaying = false;
+    let currentAudio;
+
+    let analyser;
+    let dataArray;
+    let animationId;
+
+    // Handle login button click
+    document.getElementById('login-button').addEventListener('click', (event) => {
+      event.preventDefault(); // Prevent form submission refresh
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      if (username && password) {
+        // Initiate WebSocket connection and send authentication message
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function () {
+          console.log('WebSocket connection opened');
+
+          // Send authentication message
+          ws.send(JSON.stringify({
+            type: 'auth',
+            username: username,
+            password: password
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log('Received message from server:', data);
+
+          // Handle the server's authentication response
+          if (data.type === 'auth') {
+            if (data.success) {
+              console.log('Authentication successful');
+              isAuthenticated = true; // Mark the client as authenticated
+              document.getElementById('auth-form').style.display = 'none'; // Hide the login form
+              document.getElementById('call-interface').style.display = 'block'; // Show the call interface
+            } else {
+              console.log('Authentication failed');
+              document.getElementById('auth-error').style.display = 'block'; // Show error message
+              ws.close(); // Close the connection if authentication fails
+            }
+            return; // Exit since this is an authentication message
+          }
+
+          // Only handle other messages if the client is authenticated
+          if (!isAuthenticated) {
+            console.warn('Not authenticated, ignoring message');
+            return;
+          }
+
+          // Handle media events if authenticated
+          if (data.event === 'media' && data.media && data.media.payload) {
+            audioQueue.push(data.media.payload);
+            if (!isPlaying) {
+              playNextAudio();
+            }
+          }
+
+          // Handle partial responses if authenticated
+          if (data.partialResponse) {
+            document.getElementById('output').innerHTML += `<p>${data.partialResponse}</p>`;
+          }
+        };
+      } else {
+        document.getElementById('auth-error').style.display = 'block'; // Show error if inputs are empty
+        document.getElementById('auth-error').innerText = 'Please provide both username and password.';
+      }
+    });
+
+    // Refresh calendar iframe
+    document.getElementById('refresh-calendar').addEventListener('click', () => {
+      const calendarIframe = document.getElementById('calendar-iframe');
+      calendarIframe.src = calendarIframe.src; // Reloads the iframe by resetting its src
+    });
+
+    function playNextAudio() {
+      if (audioQueue.length === 0) {
+        isPlaying = false;
+        cancelAnimationFrame(animationId);
+        animateBall(false);
+        return;
+      }
+
+      isPlaying = true;
+      const audioData = audioQueue.shift();
+      const audio = new Audio(`data:audio/wav;base64,${audioData}`);
+      currentAudio = audio;
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const source = audioContext.createMediaElementSource(audio);
+
+      if (!analyser) {
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+      }
+
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      audio.onended = () => {
+        source.disconnect();
+        playNextAudio();
+      };
+
+      audio.play().then(() => {
+        visualizeFrequency();
+      }).catch((error) => {
+        playNextAudio();
+      });
+    }
+
+    function visualizeFrequency() {
+      animationId = requestAnimationFrame(visualizeFrequency);
+
+      analyser.getByteFrequencyData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avgFrequency = sum / dataArray.length;
+
+      const minScale = 1;
+      const maxScale = 4;
+      const scaleFactor = minScale + ((avgFrequency / 255) * (maxScale - minScale));
+
+      const ball = document.getElementById('ball');
+      ball.style.transform = `scale(${scaleFactor})`;
+    }
+
+    function animateBall(start) {
+      const ball = document.getElementById('ball');
+      if (!start) {
+        ball.style.transform = 'scale(1)';
+        cancelAnimationFrame(animationId);
+      }
+    }
+
+    function startMicrophone() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          microphoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+          microphoneStream = microphoneAudioContext.createMediaStreamSource(stream);
+
+          microphoneProcessor = microphoneAudioContext.createScriptProcessor(2048, 1, 1);
+          microphoneStream.connect(microphoneProcessor);
+          microphoneProcessor.connect(microphoneAudioContext.destination);
+
+          microphoneProcessor.onaudioprocess = function (e) {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const downsampledBuffer = downsampleBuffer(inputData, microphoneAudioContext.sampleRate, 8000);
+            const encodedData = encodeMuLaw(downsampledBuffer);
+            const base64data = btoa(String.fromCharCode.apply(null, encodedData));
+
+            ws.send(JSON.stringify({
+              event: 'media',
+              media: { payload: base64data }
+            }));
+          };
+        })
+        .catch(err => {
+          console.error('Error accessing microphone:', err);
+        });
+    }
+
+    function stopMicrophone() {
+      if (microphoneProcessor) {
+        microphoneProcessor.disconnect();
+        microphoneProcessor.onaudioprocess = null;
+        microphoneProcessor = null;
+      }
+      if (microphoneStream) {
+        microphoneStream.disconnect();
+        microphoneStream = null;
+      }
+      if (microphoneAudioContext) {
+        microphoneAudioContext.close();
+        microphoneAudioContext = null;
+      }
+    }
+
+    function stopAudioPlayback() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+        analyser = null;
+        dataArray = null;
+      }
+      isPlaying = false;
+      audioQueue = [];
+      animateBall(false);
+    }
+
+    function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+      if (outSampleRate === sampleRate) {
+        return buffer;
+      }
+      if (outSampleRate > sampleRate) {
+        throw 'Downsampling rate should be smaller than original sample rate';
+      }
+      const sampleRateRatio = sampleRate / outSampleRate;
+      const newLength = Math.round(buffer.length / sampleRateRatio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = accum / count;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function encodeMuLaw(samples) {
+      const MULAW_MAX = 0x1FFF;
+      const MULAW_BIAS = 33;
+      const encoded = new Uint8Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        let sample = samples[i];
+        sample = Math.max(-1, Math.min(1, sample));
+        sample = sample * MULAW_MAX;
+        let sign = (sample < 0) ? 0x80 : 0;
+        sample = Math.abs(sample);
+        sample += MULAW_BIAS;
+        if (sample > MULAW_MAX) {
+          sample = MULAW_MAX;
+        }
+        let exponent = Math.floor(Math.log(sample) / Math.log(2));
+        let mantissa = (sample >> (exponent - 3)) & 0x0F;
+        let muLawByte = ~(sign | ((exponent - 5) << 4) | mantissa);
+        encoded[i] = muLawByte;
+      }
+      return encoded;
+    }
+
+    document.getElementById('start').addEventListener('click', () => {
+      if (conversationStarted) return;
+
+      document.getElementById('start').disabled = true;
+      document.getElementById('stop').disabled = false;
+
+      ws.send(JSON.stringify({
+        event: 'start',
+        message: 'Starting conversation'
+      }));
+      conversationStarted = true;
+
+      startMicrophone();
+    });
+
+    document.getElementById('stop').addEventListener('click', () => {
+      if (!conversationStarted) return;
+
+      stopMicrophone();
+      stopAudioPlayback();
+
+      document.getElementById('start').disabled = false;
+      document.getElementById('stop').disabled = true;
+
+      ws.send(JSON.stringify({
+        event: 'stop',
+        message: 'Ending conversation'
+      }));
+      conversationStarted = false;
+    });
+
+  </script>
+</body>
+</html>
