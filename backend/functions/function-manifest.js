@@ -3,7 +3,7 @@ const tools = [
     type: "function",
     function: {
       name: "createDentalAppointment",
-      say: "One moment, please; I'm just adding your appointment to our schedule.",
+      say: "Proszę chwilkę poczekać, już wpisuję wizytę do kalendarza.",
       description:
         "Useful for scheduling dental appointments, capturing patient details, visit type, appointment date, and verifying contact information.",
       parameters: {
@@ -57,7 +57,7 @@ const tools = [
     type: "function",
     function: {
       name: "checkCalendar",
-      say: "Just a moment, please—I'm checking our calendar for available appointments.",
+      say: "Proszę o chwilkę cierpliwości. Sprawdzam dostępne terminy w kalendarzu.",
       description:
         "Retrieve available time slots from a specified calendar based on the user's preferred time ranges and days. If no preferred slots are available, the function returns the earliest possible time slot.",
       parameters: {
@@ -140,7 +140,7 @@ const tools = [
     type: "function",
     function: {
       name: "transferCall",
-      say: "Just a moment, I'm connecting you to reception. Thank you for your patience.",
+      say: "Chwileczkę, przełączam do recepcji. Proszę o cierpliwość.",
       description:
         "Transfers the customer to a live agent in case they request help from a real person.",
       parameters: {
