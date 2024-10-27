@@ -3,7 +3,7 @@ const tools = [
     type: "function",
     function: {
       name: "createDentalAppointment",
-      say: "Proszę chwilkę poczekać, już wpisuję wizytę do kalendarza.",
+      say: "One moment, please; I'm just adding your appointment to our schedule.",
       description:
         "Useful for scheduling dental appointments, capturing patient details, visit type, appointment date, and verifying contact information.",
       parameters: {
@@ -57,7 +57,7 @@ const tools = [
     type: "function",
     function: {
       name: "checkCalendar",
-      say: "Proszę o chwilkę cierpliwości. Sprawdzam dostępne terminy w kalendarzu.",
+      say: "Just a moment, please—I'm checking our calendar for available appointments.",
       description:
         "Retrieve available time slots from a specified calendar based on the user's preferred time ranges and days. If no preferred slots are available, the function returns the earliest possible time slot.",
       parameters: {
@@ -102,45 +102,11 @@ const tools = [
       },
     },
   },
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "endCall",
-  //     say: "Dziękujemy za rozmowę. Gabinet Aria Dental.",
-  //     description: "Terminates the current call.",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         callSid: {
-  //           description:
-  //             "The unique identifier for the call that needs to be terminated.",
-  //           type: "string",
-  //         },
-  //       },
-  //       required: ["callSid"],
-  //     },
-  //     returns: {
-  //       type: "object",
-  //       properties: {
-  //         status: {
-  //           type: "string",
-  //           description:
-  //             'The status of the call termination attempt, e.g., "success" or "error".',
-  //         },
-  //         message: {
-  //           type: "string",
-  //           description:
-  //             "A message detailing the result of the termination attempt.",
-  //         },
-  //       },
-  //     },
-  //   },
-  // },
   {
     type: "function",
     function: {
       name: "transferCall",
-      say: "Chwileczkę, przełączam do recepcji. Proszę o cierpliwość.",
+      say: "Just a moment, I'm connecting you to reception. Thank you for your patience.",
       description:
         "Transfers the customer to a live agent in case they request help from a real person.",
       parameters: {

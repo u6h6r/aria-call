@@ -278,7 +278,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         &#x21bb;
       </button>
 
-      <h1>Przetestuj AriaCall!</h1>
+      <h1>Test AriaCall!</h1>
 
       <div id="visual">
         <div id="ball" ref={ballRef}></div>

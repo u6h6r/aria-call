@@ -6,10 +6,10 @@ function NavLinks({ navOpen }) {
   return (
     <div className={`nav-links ${navOpen ? 'open' : ''}`} id="navLinks">
       <a href="https://ariacall.pl" target="_blank" rel="noopener noreferrer">
-        Strona projektu
+        About project
       </a>
       <a
-        href="https://github.com/mwilkosz/AriaCall"
+        href="https://github.com/u6h6r/aria-call"
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -31,7 +31,7 @@ function TopBar() {
       </div>
       <NavLinks navOpen={navOpen} />
       <a href="https://calendly.com/ariacall/30min" className="demo-button">
-        Umów demo
+        Schedule a demo
       </a>
       <div className="hamburger-menu" onClick={toggleNavLinks}>
         <span></span>

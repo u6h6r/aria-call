@@ -37,7 +37,7 @@ app.ws('/connection', (ws) => {
       ttsService.generate(
         {
           partialResponseIndex: null,
-          partialResponse: "Czy mogę prosić o powtórzenie?",
+          partialResponse: "Could you please repeat?",
         },
         0
       );
@@ -56,7 +56,7 @@ app.ws('/connection', (ws) => {
           {
             partialResponseIndex: null,
             partialResponse:
-              "Dzień dobry, tu Monika, wirtualna asystentka gabinetu Aria-Dental. Mogę pomóc w umówieniu wizyty lub przełączyć do recepcji. W czym mogę dzisiaj pomóc?",
+              "Hello, it's Eva, the virtual assistant of AriaDental clinic. How can I help you?",
           },
           0
         );
