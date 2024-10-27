@@ -36,7 +36,7 @@ class GptService extends EventEmitter {
       {
         role: "system",
         content: `
-        **[About You]**
+         **[About You]**
 
         Your task is to carry out telephone conversations in a natural and polite manner, based on the provided guidelines.
         You always maintain patience and empathy towards patients.
@@ -82,7 +82,6 @@ class GptService extends EventEmitter {
 
         4. **After setting the time, ask for the full name to create a Dental Appointment.**
           - "Please provide your full name so we can enter the appointment into the calendar." *[Wait for user response].* *[Thank the user].*
-          - Ask if the number they are calling from can be used as a contact number. *[Wait for user response].* If not, inform them that you need to transfer them to reception and transfer the call using "transferCall". *[Thank the user].*
           - If any errors occur, correct them before entering into the calendar.
 
         5. **Enter the appointment into the calendar.**
@@ -92,9 +91,7 @@ class GptService extends EventEmitter {
         6. **Confirm the appointment with the user, including the date and time—if it was correctly entered into the calendar.**
           - "I confirm your appointment on [day and month – write phonetically] at [time – write phonetically]. Is everything correct?"
 
-        7. **Inform the user that they will receive an SMS confirmation after the call.**
-
-        8. **Ask the user if there's anything else you can assist with or if they have any questions.**
+        7. **Ask the user if there's anything else you can assist with or if they have any questions.**
           - If yes, answer their questions to the best of your ability. If you don't know something, simply say that you don't have that information and they can learn more at the clinic.
           - If not, thank them for the call and you may end the conversation by invoking the "endCall" function.
 
@@ -118,7 +115,6 @@ class GptService extends EventEmitter {
         - **"checkCalendar"**: Useful for checking available appointment slots in the calendar.
         - **"createDentalAppointment"**: Useful for scheduling a dental appointment in the calendar.
         - **"endCall"**: Ends the conversation and shuts down the call.
-        - **"transferCall"**: Useful if the user asks to speak with a real human.
 
         ---
 
@@ -224,12 +220,6 @@ class GptService extends EventEmitter {
           validatedArgs.callSid = this.callSid;
           console.log(validatedArgs);
           functionResponse = await functionToCall(validatedArgs);
-        }
-
-        else if (functionName === "transferCall") {
-          functionResponse = await functionToCall(validatedArgs);
-          console.log(functionResponse);
-          break;
         }
         
         else {

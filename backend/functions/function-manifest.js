@@ -5,7 +5,7 @@ const tools = [
       name: "createDentalAppointment",
       say: "One moment, please; I'm just adding your appointment to our schedule.",
       description:
-        "Useful for scheduling dental appointments, capturing patient details, visit type, appointment date, and verifying contact information.",
+        "Useful for scheduling dental appointments, capturing patient details, visit type, appointment date",
       parameters: {
         type: "object",
         properties: {
@@ -23,17 +23,11 @@ const tools = [
               "The scheduled date and time for the patient's appointment.",
             type: "string",
           },
-          isCorrectNumber: {
-            description:
-              "Indicates whether the current contact number patient is calling is accurate and can be used to reach the patient.",
-            type: "boolean",
-          },
         },
         required: [
           "visitType",
           "patientData",
           "appointmentDate",
-          "isCorrectNumber",
         ],
       },
       returns: {
@@ -105,16 +99,16 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "transferCall",
-      say: "Just a moment, I'm connecting you to reception. Thank you for your patience.",
-      description:
-        "Transfers the customer to a live agent in case they request help from a real person.",
+      name: "endCall",
+      say: "Thank you for calling AriaDental. Have a great day",
+      description: "Terminates the current call.",
       parameters: {
         type: "object",
         properties: {
           callSid: {
+            description:
+              "The unique identifier for the call that needs to be terminated.",
             type: "string",
-            description: "The unique identifier for the active phone call.",
           },
         },
         required: ["callSid"],
@@ -125,7 +119,12 @@ const tools = [
           status: {
             type: "string",
             description:
-              "Whether or not the customer call was successfully transfered",
+              'The status of the call termination attempt, e.g., "success" or "error".',
+          },
+          message: {
+            type: "string",
+            description:
+              "A message detailing the result of the termination attempt.",
           },
         },
       },

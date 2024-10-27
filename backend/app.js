@@ -19,7 +19,7 @@ app.ws('/connection', (ws) => {
   try {
     ws.on("error", console.error);
     let streamSid = "stream-123"; // static stream ID
-    let callSid = "call-123";     // static call ID
+    let callSid = "call-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
 
     const gptService = new GptService();
     const streamService = new StreamService(ws);
@@ -102,7 +102,7 @@ app.ws('/connection', (ws) => {
           },
         };
 
-        fetch("https://hook.eu2.make.com/e1t1bgpomz6ahl4o5plp8twwh9ukgjm1", {
+        fetch("https://hook.eu2.make.com/x7bmay9v0p9aqnl556bgmhdgptqxatqv", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -116,6 +116,7 @@ app.ws('/connection', (ws) => {
 
     transcriptionService.on("utterance", async (text) => {
       if (marks.length > 0 && text?.length > 5) {
+        console.log("User -> Interruption, Clearing stream".red);
         ws.send(
           JSON.stringify({
             streamSid,
@@ -129,17 +130,40 @@ app.ws('/connection', (ws) => {
       if (!text) {
         return;
       }
+      console.log(
+              `Interaction ${interactionCount} – STT -> GPT: ${text}`.yellow
+            );
       clearTimeout(delayTimer);
       gptService.completion(text, interactionCount);
       interactionCount += 1;
     });
 
     gptService.on("gptreply", async (gptReply, icount) => {
+            console.log(
+              `Interaction ${icount}: GPT -> TTS: ${gptReply.partialResponse}`
+                .green
+            );
       clearTimeout(delayTimer);
+            console.log("Clear timeout");
+            if (
+              gptReply &&
+              gptReply.partialResponse &&
+              gptReply.partialResponse.includes("end the call")
+            ) {
+              console.log(gptReply.partialResponse);
+              console.log(callSid);
+              try {
+                const result = await endCall(callSid);
+                console.log(result);
+              } catch (err) {
+                console.error(`Failed to end call ${callSid}:`, err);
+              }
+            }
       ttsService.generate(gptReply, icount);
     });
 
     ttsService.on("speech", (responseIndex, audio, label, icount) => {
+      console.log(`Interaction ${icount}: TTS -> TWILIO: ${label}`.blue);
       streamService.buffer(responseIndex, audio);
     });
 

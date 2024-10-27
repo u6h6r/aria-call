@@ -1,7 +1,7 @@
 const fetch = require("node-fetch");
 
 async function createDentalAppointment(functionArgs) {
-  const { visitType, patientData, appointmentDate, isCorrectNumber, callSid} =
+  const { visitType, patientData, appointmentDate, callSid} =
     functionArgs;
   console.log("GPT -> called createDentalAppointment function");
 
@@ -18,7 +18,6 @@ async function createDentalAppointment(functionArgs) {
                 visitType: visitType,
                 patientData: patientData,
                 appointmentDate: appointmentDate,
-                isCorrectNumber: isCorrectNumber,
               },
             },
           },
