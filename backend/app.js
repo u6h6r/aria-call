@@ -59,7 +59,7 @@ app.ws('/connection', (ws) => {
           {
             partialResponseIndex: null,
             partialResponse:
-              'Hello, this is Eva, the virtual assistant of Aria-Dental clinic. How may I assist you today?',
+              "Hello, it's Eva, the virtual assistant of AriaDental clinic. I can quickly help you with booking and make things easier. If you need a human, just let me know. How can I help you?",
           },
           interactionCount
         );
