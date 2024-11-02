@@ -76,7 +76,7 @@ class GptService extends EventEmitter {
           - Use tool "checkCalendar" – fill in the 'from' and 'to' parameters according to the user's preferences.
 
         3. **Present available times based on the previous response with dates.**
-          - Present available date ranges or specific times if the user requested them. *(Write them phonetically, e.g., 9:00 as nine o'clock, 14:00 as two o'clock in the afternoon, etc.).*
+          - Present a maximum of 3 available date ranges or specific times, even if more options are available. *(Write them phonetically, e.g., 9:00 as nine o'clock, 14:00 as two o'clock in the afternoon, etc.).*
           - Ask the user to choose a time or suggest additional available slots.
           - If a certain time is not available, adjust the range and check again.
 
