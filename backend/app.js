@@ -59,7 +59,7 @@ app.ws('/connection', (ws) => {
           {
             partialResponseIndex: null,
             partialResponse:
-              'Hello, this is Eva, the virtual assistant of Aria-Dental clinic. How may I assist you today?',
+              'Hello, this is Eva from AriaDental clinic. I am calling to confirm your upcoming appointment.',
           },
           interactionCount
         );
@@ -94,7 +94,7 @@ app.ws('/connection', (ws) => {
                 orgId: streamSid,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                type: 'inbound',
+                type: 'outbound', // Changed from 'inbound' to 'outbound'
                 status: '',
                 assistantId: '',
               },
