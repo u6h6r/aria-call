@@ -58,23 +58,24 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
     const audio = new Audio(`data:audio/wav;base64,${audioData}`);
     currentAudioRef.current = audio;
 
-    if (!audioContextRef.current) {
+    // Utwórz nowy AudioContext, jeśli jest to konieczne
+    if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     const source = audioContextRef.current.createMediaElementSource(audio);
 
-    if (!analyserRef.current) {
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
-    }
+    // Zawsze twórz nowy AnalyserNode dla nowego AudioContext
+    analyserRef.current = audioContextRef.current.createAnalyser();
+    analyserRef.current.fftSize = 256;
+    dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
 
     source.connect(analyserRef.current);
     analyserRef.current.connect(audioContextRef.current.destination);
 
     audio.onended = () => {
       source.disconnect();
+      analyserRef.current.disconnect();
       playNextAudio();
     };
 
@@ -84,7 +85,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         visualizeFrequency();
       })
       .catch((error) => {
-        console.error('Error playing audio:', error);
+        console.error('Błąd odtwarzania audio:', error);
         playNextAudio();
       });
   }, [animateBall, visualizeFrequency]);
@@ -94,12 +95,12 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('Connected to server');
+      console.log('Połączono z serwerem');
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Received message from server:', data);
+      console.log('Otrzymano wiadomość z serwera:', data);
 
       if (data.event === 'media' && data.media && data.media.payload) {
         audioQueueRef.current.push(data.media.payload);
@@ -114,15 +115,18 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('Błąd WebSocket:', error);
     };
 
     ws.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log('Połączenie WebSocket zostało zamknięte');
     };
 
     return () => {
-      ws.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, [playNextAudio]);
 
@@ -154,7 +158,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         };
       })
       .catch((err) => {
-        console.error('Error accessing microphone:', err);
+        console.error('Błąd dostępu do mikrofonu:', err);
       });
   };
 
@@ -162,16 +166,16 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
     if (microphoneProcessorRef.current) {
       microphoneProcessorRef.current.disconnect();
       microphoneProcessorRef.current.onaudioprocess = null;
+      microphoneProcessorRef.current = null;
     }
     if (microphoneStreamRef.current) {
       microphoneStreamRef.current.disconnect();
+      microphoneStreamRef.current = null;
     }
     if (microphoneAudioContextRef.current) {
       microphoneAudioContextRef.current.close();
+      microphoneAudioContextRef.current = null;
     }
-    microphoneProcessorRef.current = null;
-    microphoneStreamRef.current = null;
-    microphoneAudioContextRef.current = null;
   };
 
   const stopAudioPlayback = () => {
@@ -184,6 +188,11 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    if (analyserRef.current) {
+      analyserRef.current.disconnect();
+      analyserRef.current = null;
+    }
+    dataArrayRef.current = null;
     isPlayingRef.current = false;
     audioQueueRef.current = [];
     animateBall(false);
@@ -191,7 +200,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
 
   const downsampleBuffer = (buffer, sampleRate, outSampleRate) => {
     if (outSampleRate >= sampleRate) {
-      throw new Error('Downsampling rate should be lower than original sample rate');
+      throw new Error('Docelowa częstotliwość próbkowania powinna być niższa niż oryginalna');
     }
     const sampleRateRatio = sampleRate / outSampleRate;
     const newLength = Math.round(buffer.length / sampleRateRatio);
