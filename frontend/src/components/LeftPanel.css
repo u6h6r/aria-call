@@ -92,8 +92,8 @@
 }
 
 .refresh-button {
-  position: absolute;
-  top: 20px;
+  position: fixed;
+  top: 70px;
   right: 20px;
   width: 40px;
   height: 40px;
@@ -110,7 +110,7 @@
 }
 
 .refresh-button:hover {
-  background-color: #4E8AFF;
+  background-color: #3b6fcd;
 }
 
 @media (max-width: 768px) {
@@ -120,6 +120,6 @@
   }
 
   .button-container {
-    flex-direction: column;
+    flex-direction: row;
   }
 }
