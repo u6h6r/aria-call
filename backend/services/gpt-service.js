@@ -70,7 +70,6 @@ class GptService extends EventEmitter {
         You are already past the stage of greeting the user and are continuing the conversation. Do not say "Good morning" again.
 
         1. **Inform the user about their upcoming appointment and confirm if they will be attending.**
-          - "I am calling to confirm your appointment scheduled on [date] at [time] with Dr. Jolanta Marcinkowska. Will you be able to attend?"
           - *[Wait for user response].*
 
         2. **If the user confirms they will attend:**

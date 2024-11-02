@@ -58,14 +58,12 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
     const audio = new Audio(`data:audio/wav;base64,${audioData}`);
     currentAudioRef.current = audio;
 
-    // Utwórz nowy AudioContext, jeśli jest to konieczne
     if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     const source = audioContextRef.current.createMediaElementSource(audio);
 
-    // Zawsze twórz nowy AnalyserNode dla nowego AudioContext
     analyserRef.current = audioContextRef.current.createAnalyser();
     analyserRef.current.fftSize = 256;
     dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
@@ -85,22 +83,65 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         visualizeFrequency();
       })
       .catch((error) => {
-        console.error('Błąd odtwarzania audio:', error);
+        console.error('Audio playback error:', error);
         playNextAudio();
       });
   }, [animateBall, visualizeFrequency]);
+
+  const stopAudioPlayback = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (analyserRef.current) {
+      analyserRef.current.disconnect();
+      analyserRef.current = null;
+    }
+    dataArrayRef.current = null;
+    isPlayingRef.current = false;
+    audioQueueRef.current = [];
+    animateBall(false);
+  }, [animateBall]);
+
+  const stopMicrophone = useCallback(() => {
+    if (microphoneProcessorRef.current) {
+      microphoneProcessorRef.current.disconnect();
+      microphoneProcessorRef.current.onaudioprocess = null;
+      microphoneProcessorRef.current = null;
+    }
+    if (microphoneStreamRef.current) {
+      microphoneStreamRef.current.disconnect();
+      microphoneStreamRef.current = null;
+    }
+    if (microphoneAudioContextRef.current) {
+      microphoneAudioContextRef.current.close();
+      microphoneAudioContextRef.current = null;
+    }
+  }, []);
+
+  const endConversation = useCallback(() => {
+    stopMicrophone();
+    stopAudioPlayback();
+    setConversationStarted(false);
+    if (onCallEnded) onCallEnded();
+  }, [stopMicrophone, stopAudioPlayback, onCallEnded]);
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:3000/connection');
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('Połączono z serwerem');
+      console.log('Connected to server');
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Otrzymano wiadomość z serwera:', data);
+      console.log('Message received from server:', data);
 
       if (data.event === 'media' && data.media && data.media.payload) {
         audioQueueRef.current.push(data.media.payload);
@@ -112,14 +153,18 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
       if (data.partialResponse) {
         setOutput((prev) => [...prev, data.partialResponse]);
       }
+
+      if (data.event === 'endCall') {
+        endConversation();
+      }
     };
 
     ws.onerror = (error) => {
-      console.error('Błąd WebSocket:', error);
+      console.error('WebSocket error:', error);
     };
 
     ws.onclose = () => {
-      console.log('Połączenie WebSocket zostało zamknięte');
+      console.log('WebSocket connection closed');
     };
 
     return () => {
@@ -128,7 +173,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         wsRef.current = null;
       }
     };
-  }, [playNextAudio]);
+  }, [playNextAudio, endConversation]);
 
   const startMicrophone = () => {
     navigator.mediaDevices
@@ -158,49 +203,13 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         };
       })
       .catch((err) => {
-        console.error('Błąd dostępu do mikrofonu:', err);
+        console.error('Microphone access error:', err);
       });
-  };
-
-  const stopMicrophone = () => {
-    if (microphoneProcessorRef.current) {
-      microphoneProcessorRef.current.disconnect();
-      microphoneProcessorRef.current.onaudioprocess = null;
-      microphoneProcessorRef.current = null;
-    }
-    if (microphoneStreamRef.current) {
-      microphoneStreamRef.current.disconnect();
-      microphoneStreamRef.current = null;
-    }
-    if (microphoneAudioContextRef.current) {
-      microphoneAudioContextRef.current.close();
-      microphoneAudioContextRef.current = null;
-    }
-  };
-
-  const stopAudioPlayback = () => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (analyserRef.current) {
-      analyserRef.current.disconnect();
-      analyserRef.current = null;
-    }
-    dataArrayRef.current = null;
-    isPlayingRef.current = false;
-    audioQueueRef.current = [];
-    animateBall(false);
   };
 
   const downsampleBuffer = (buffer, sampleRate, outSampleRate) => {
     if (outSampleRate >= sampleRate) {
-      throw new Error('Docelowa częstotliwość próbkowania powinna być niższa niż oryginalna');
+      throw new Error('The target sample rate should be lower than the original');
     }
     const sampleRateRatio = sampleRate / outSampleRate;
     const newLength = Math.round(buffer.length / sampleRateRatio);
@@ -259,9 +268,7 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
   const handleStop = () => {
     if (!conversationStarted) return;
 
-    stopMicrophone();
-    stopAudioPlayback();
-    setConversationStarted(false);
+    endConversation();
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(
@@ -271,8 +278,6 @@ function LeftPanel({ onCallEnded, onRefreshCalendar }) {
         })
       );
     }
-
-    if (onCallEnded) onCallEnded();
   };
 
   const handleRefresh = () => {

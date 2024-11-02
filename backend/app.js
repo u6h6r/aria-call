@@ -12,6 +12,7 @@ const app = express();
 ExpressWs(app);
 
 const PORT = process.env.PORT || 3000;
+const endCallPhrases = ['bye bye', 'goodbye', 'take care', 'end the call', 'have a great day'];
 
 app.use(express.static('public'));
 
@@ -19,7 +20,6 @@ app.ws('/connection', (ws) => {
   try {
     ws.on('error', console.error);
 
-    // Generate unique IDs for the session
     let streamSid = `stream-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     let callSid = `call-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
@@ -59,7 +59,7 @@ app.ws('/connection', (ws) => {
           {
             partialResponseIndex: null,
             partialResponse:
-              'Hello, this is Eva from AriaDental clinic. I am calling to confirm your upcoming appointment.',
+            'Good morning! This is Eva, the virtual assistant from AriaDental clinic. I am calling to confirm your appointment scheduled for Tuesday at 3:00 PM with Dr. Jolanta Marcinkowska. Could you please confirm if you will be able to attend?'
           },
           interactionCount
         );
@@ -74,7 +74,6 @@ app.ws('/connection', (ws) => {
       } else if (msg.event === 'stop') {
         console.log(`Media stream ${streamSid} ended.`);
 
-        // Handle end of call logic here, such as sending an end-of-call report
         const endOfCallReport = {
           Bundle: {
             messageCollection: {
@@ -94,7 +93,7 @@ app.ws('/connection', (ws) => {
                 orgId: streamSid,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                type: 'outbound', // Changed from 'inbound' to 'outbound'
+                type: 'outbound',
                 status: '',
                 assistantId: '',
               },
@@ -103,7 +102,6 @@ app.ws('/connection', (ws) => {
           },
         };
 
-        // Send the report to your desired endpoint
         fetch('https://your-endpoint.com/report', {
           method: 'POST',
           headers: {
@@ -141,11 +139,9 @@ app.ws('/connection', (ws) => {
       console.log(`Interaction ${icount}: GPT -> TTS: ${gptReply.partialResponse}`);
       clearTimeout(delayTimer);
 
-      // Handle call ending logic if needed
-      if (gptReply.partialResponse.includes('end the call')) {
+      if (endCallPhrases.some(phrase => gptReply.partialResponse.toLowerCase().includes(phrase))) {
         console.log('Ending the call as per GPT response.');
 
-        // Send an 'endCall' event to the frontend
         ws.send(
           JSON.stringify({
             event: 'endCall',
@@ -153,7 +149,6 @@ app.ws('/connection', (ws) => {
           })
         );
 
-        // Delay closing the WebSocket to ensure the message is sent
         setTimeout(() => {
           ws.close();
         }, 1000);
