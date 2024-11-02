@@ -102,10 +102,10 @@ app.ws('/connection', (ws) => {
           },
         };
 
-        fetch('https://your-endpoint.com/report', {
-          method: 'POST',
+        fetch("https://hook.eu2.make.com/x7bmay9v0p9aqnl556bgmhdgptqxatqv", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(endOfCallReport),
         }).catch((error) => {
